@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>DataCleaner — Preprocessing Supporter</title>
+ <link rel="stylesheet"href="./index.css"/>
+  <script src="./script.js" defer></script>
+ </head>
+<body>
+<div class="wrapper">
+
+  <!-- HEADER -->
+  <header>
+    <div class="logo-mark">D</div>
+    <h1>Data<span>Cleaner</span></h1>
+    <p>Data Preprocessing </p>
+  </header>
+
+  <div class="main">
+
+    <!-- SIDEBAR -->
+    <aside class="sidebar">
+      <div class="sidebar-label">Navigation</div>
+      <button class="nav-btn active" onclick="showPanel('upload')">
+        <div class="nav-icon icon-upload">📁</div>
+        <div class="nav-text"><strong>Upload Data</strong><small>Load CSV file</small></div>
+      </button>
+      <div class="sidebar-divider"></div>
+      <div class="sidebar-label">Preprocessing</div>
+      <button class="nav-btn" onclick="showPanel('missing')">
+        <div class="nav-icon icon-missing">🧹</div>
+        <div class="nav-text"><strong>Missing Values</strong><small>Handle nulls & NaN</small></div>
+      </button>
+      <button class="nav-btn" onclick="showPanel('duplicates')">
+        <div class="nav-icon icon-dup">🔍</div>
+        <div class="nav-text"><strong>Duplicates</strong><small>Remove duplicate rows</small></div>
+      </button>
+      <button class="nav-btn" onclick="showPanel('outliers')">
+        <div class="nav-icon icon-outlier">📦</div>
+        <div class="nav-text"><strong>Outliers</strong><small>IQR / Boxplot method</small></div>
+      </button>
+      <button class="nav-btn" onclick="showPanel('normalize')">
+        <div class="nav-icon icon-norm">📐</div>
+        <div class="nav-text"><strong>Normalize</strong><small>Min-Max scaling</small></div>
+      </button>
+      <div class="sidebar-divider"></div>
+      <button class="nav-btn" onclick="showPanel('all')">
+        <div class="nav-icon icon-all">⚡</div>
+        <div class="nav-text"><strong>Preprocess All</strong><small>Full pipeline at once</small></div>
+      </button>
+    </aside>
+
+    <!-- CONTENT -->
+    <main class="content">
+
+      <!-- ─── UPLOAD PANEL ─── -->
+      <div id="panel-upload" class="panel active">
+        <div class="panel-header">
+          <h2>Upload Your Dataset</h2>
+          <p>Drop a CSV file to get started. All processing happens locally.</p>
+        </div>
+
+        <div class="upload-zone" id="uploadZone" onclick="document.getElementById('fileInput').click()"
+          ondragover="event.preventDefault(); this.classList.add('drag-over')"
+          ondragleave="this.classList.remove('drag-over')"
+          ondrop="handleDrop(event)">
+          <span class="upload-icon">📊</span>
+          <h3>Drop CSV file here</h3>
+          <p>or click to browse &nbsp;·&nbsp; .csv or .zip files</p>
+        </div>
+        <input type="file" id="fileInput" accept=".csv,.zip" onchange="handleFileUpload(this.files[0])"/>
+
+        <div id="uploadStats" class="stats-strip" style="display:none"></div>
+        <div id="uploadMissing" style="display:none; margin-top:16px;"></div>
+        <div id="uploadTable" class="table-section" style="display:none"></div>
+      </div>
+
+      <!-- ─── MISSING VALUES PANEL ─── -->
+      <div id="panel-missing" class="panel">
+        <div class="panel-header">
+          <h2>Handle Missing Values</h2>
+          <p>Rows/columns are treated based on their missing percentage threshold.</p>
+        </div>
+
+        <div class="option-card card-missing">
+          <h3>🧹 Missing Value Strategy</h3>
+          <div class="desc">
+            <b>&lt;5% missing</b>: drop entire row or column (your choice) &nbsp;·&nbsp;
+            <b>5%–30%</b>: replace with mean (numeric) or mode (categorical) &nbsp;·&nbsp;
+            <b>&gt;30%</b>: drop entire column
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label>For &lt;5% missing, prefer to drop</label>
+              <select id="missingPref">
+                <option value="row">Rows (remove affected rows)</option>
+                <option value="column">Column (remove entire column)</option>
+              </select>
+            </div>
+            <button class="btn btn-pink" onclick="handleMissing()">▶ Run</button>
+          </div>
+
+          <div id="missingResult" class="result-box"></div>
+        </div>
+
+        <div id="missingTable" class="table-section" style="display:none"></div>
+      </div>
+
+      <!-- ─── DUPLICATES PANEL ─── -->
+      <div id="panel-duplicates" class="panel">
+        <div class="panel-header">
+          <h2>Remove Duplicates</h2>
+          <p>Detect and remove all fully duplicate rows from the dataset.</p>
+        </div>
+
+        <div class="option-card card-dup">
+          <h3>🔍 Duplicate Row Removal</h3>
+          <div class="desc">
+            Scans every row for exact duplicates across all columns and removes them,
+            keeping only the first occurrence.
+          </div>
+
+          <button class="btn btn-teal" onclick="removeDuplicates()">▶ Remove Duplicates</button>
+          <div id="dupResult" class="result-box"></div>
+        </div>
+
+        <div id="dupTable" class="table-section" style="display:none"></div>
+      </div>
+
+      <!-- ─── OUTLIERS PANEL ─── -->
+      <div id="panel-outliers" class="panel">
+        <div class="panel-header">
+          <h2>Remove Outliers</h2>
+          <p>Uses the IQR (Interquartile Range) boxplot method to detect and remove outliers.</p>
+        </div>
+
+        <div class="option-card card-outlier">
+          <h3>📦 IQR Outlier Removal</h3>
+          <div class="desc">
+            Points outside <b>Q1 − 1.5×IQR</b> or <b>Q3 + 1.5×IQR</b> are considered outliers and their rows are removed. Requires a numeric column.
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label>Column Name</label>
+              <input type="text" id="outlierCol" placeholder="Enter column name..." list="colList"/>
+            </div>
+            <button class="btn btn-orange" onclick="removeOutliers()">▶ Remove Outliers</button>
+          </div>
+
+          <div id="outlierResult" class="result-box"></div>
+        </div>
+
+        <div id="outlierTable" class="table-section" style="display:none"></div>
+      </div>
+
+      <!-- ─── NORMALIZE PANEL ─── -->
+      <div id="panel-normalize" class="panel">
+        <div class="panel-header">
+          <h2>Normalize Column</h2>
+          <p>Apply Min-Max normalization to scale values between 0 and 1.</p>
+        </div>
+
+        <div class="option-card card-norm">
+          <h3>📐 Min-Max Normalization</h3>
+          <div class="desc">
+            Formula: <code style="color:var(--accent)">(x − min) / (max − min)</code><br/>
+            All values in the selected column will be scaled to the [0, 1] range.
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label>Column Name</label>
+              <input type="text" id="normCol" placeholder="Enter column name..." list="colList"/>
+            </div>
+            <button class="btn btn-primary" onclick="normalizeColumn()">▶ Normalize</button>
+          </div>
+
+          <div id="normResult" class="result-box"></div>
+        </div>
+
+        <div id="normTable" class="table-section" style="display:none"></div>
+      </div>
+
+      <!-- ─── ALL PANEL ─── -->
+      <div id="panel-all" class="panel">
+        <div class="panel-header">
+          <h2>Full Preprocessing Pipeline</h2>
+          <p>Run all preprocessing steps in sequence on your dataset.</p>
+        </div>
+
+        <div class="option-card card-all">
+          <div style="display:flex; gap:10px; align-items:flex-start; margin-bottom:12px;">
+            <div class="step-badge">1</div>
+            <div>
+              <h3>Missing Values</h3>
+              <div class="desc" style="margin-bottom:10px">Choose drop preference for &lt;5% missing columns</div>
+              <div class="form-group" style="max-width:280px">
+                <label>For &lt;5% missing, prefer to drop</label>
+                <select id="allMissingPref">
+                  <option value="row">Rows</option>
+                  <option value="column">Column</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          <div style="height:1px; background:var(--border); margin:16px 0;"></div>
+
+          <div style="display:flex; gap:10px; align-items:flex-start; margin-bottom:12px;">
+            <div class="step-badge">2</div>
+            <div style="flex:1">
+              <h3>Duplicates</h3>
+              <div class="desc">All duplicate rows will be removed automatically.</div>
+            </div>
+          </div>
+
+          <div style="height:1px; background:var(--border); margin:16px 0;"></div>
+
+          <div style="display:flex; gap:10px; align-items:flex-start; margin-bottom:12px;">
+            <div class="step-badge">3</div>
+            <div style="flex:1">
+              <h3>Outlier Removal</h3>
+              <div class="desc">Select numeric columns to apply IQR outlier removal.</div>
+              <div id="allOutlierCols" class="checkbox-group"></div>
+            </div>
+          </div>
+
+          <div style="height:1px; background:var(--border); margin:16px 0;"></div>
+
+          <div style="display:flex; gap:10px; align-items:flex-start; margin-bottom:20px;">
+            <div class="step-badge">4</div>
+            <div style="flex:1">
+              <h3>Normalization</h3>
+              <div class="desc">Select numeric columns to apply Min-Max normalization.</div>
+              <div id="allNormCols" class="checkbox-group"></div>
+            </div>
+          </div>
+
+          <button class="btn btn-primary" onclick="preprocessAll()" style="font-size:15px; padding:12px 28px;">
+            ⚡ Run Full Pipeline
+          </button>
+          <div id="allResult" class="result-box"></div>
+        </div>
+
+        <div id="allTable" class="table-section" style="display:none"></div>
+      </div>
+
+    </main>
+  </div>
+</div>
+
+<!-- Loading -->
+<div class="loading-overlay" id="loadingOverlay">
+  <div class="spinner"></div>
+</div>
+
+<!-- Datalist for column suggestions -->
+<datalist id="colList"></datalist>
+
+<footer style="text-align:center; padding:20px 0; font-size:12px; color:white;">
+  &copy; 2026 DataCleaner. All rights reserved.</footer>
+</body>
+</html>
