@@ -73,7 +73,7 @@ Applies Min-Max Normalization to scale numeric values between 0 and 1.
 
 ## Author
 
-Developed by [Your Name]
+Developed by Deepanshu Choudhary
 
 ---
 
